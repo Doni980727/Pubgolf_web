@@ -65,6 +65,30 @@ supabase/migrations/002_mobile_web_update.sql
 
 Den lägger till originalets pubnamn utan att ta bort befintliga poster och lägger till funktionen för att lämna en lobby korrekt.
 
+Kör därefter:
+
+```text
+supabase/migrations/003_pub_coordinates.sql
+```
+
+Den lägger till koordinater för de förinstallerade Umeå-pubarna, vilket används av ruttlägena Smart slump och Närmaste rutt.
+
+För Custom game, kör även:
+
+```text
+supabase/migrations/004_custom_games.sql
+```
+
+Den låter ett spel använda tillfälliga namn och adresser som stationer. Adresserna rensas automatiskt när spelet avslutas.
+
+Kör slutligen:
+
+```text
+supabase/migrations/005_custom_route_optimization.sql
+```
+
+Den lägger till tillfälliga koordinater för automatisk optimering av custom-rutter.
+
 ## Mobilanvändning
 
 Sidan är byggd mobile-first och använder `100dvh`, `viewport-fit=cover` samt `safe-area-inset-*`. På desktop visas appen i ungefär mobilbredd i mitten för att beteendet ska vara lätt att testa.

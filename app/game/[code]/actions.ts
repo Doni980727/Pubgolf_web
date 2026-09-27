@@ -67,5 +67,5 @@ export async function advanceHole(formData: FormData) {
   const { error } = await supabase.from("games").update(update).eq("id", game.id);
   if (error) redirect(`/game/${code}?error=${encodeURIComponent(error.message)}`);
   revalidatePath(`/game/${code}`);
-  if (game.current_hole >= game.holes) redirect("/dashboard");
+  if (game.current_hole >= game.holes) redirect(`/game/${code}`);
 }

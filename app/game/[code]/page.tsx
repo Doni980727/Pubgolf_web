@@ -5,6 +5,7 @@ import MobileTopBar from "@/components/MobileTopBar";
 import AutoRefresh from "@/components/AutoRefresh";
 import ShareGameButton from "@/components/ShareGameButton";
 import ScoreControl from "@/components/ScoreControl";
+import GameQrCode from "@/components/GameQrCode";
 import { advanceHole, leaveGame, startGame } from "./actions";
 
 type PlayerRow = { user_id: string; username: string | null; joined_at: string };
@@ -29,7 +30,7 @@ export default async function GamePage({ params, searchParams }: { params: Promi
 
   const [{ data: players }, { data: holes }, { data: results }, { data: wheelRows }] = await Promise.all([
     supabase.from("game_player_list").select("user_id,username,joined_at").eq("game_id", game.id).order("joined_at"),
-    supabase.from("game_holes").select("hole_number,wheel_enabled,bar_id,bars(name,city)").eq("game_id", game.id).order("hole_number"),
+    supabase.from("game_holes").select("hole_number,wheel_enabled,bar_id,custom_name,custom_address,bars(name,city)").eq("game_id", game.id).order("hole_number"),
     supabase.from("results").select("user_id,hole_number,score,confirmed").eq("game_id", game.id),
     supabase.from("wheel_assignments").select("user_id,hole_number,score_delta,status").eq("game_id", game.id),
   ]);
@@ -39,7 +40,18 @@ export default async function GamePage({ params, searchParams }: { params: Promi
   const wheelList = (wheelRows ?? []) as WheelRow[];
   const holeList = (holes ?? []) as any[];
   const currentHole = holeList.find((h) => Number(h.hole_number) === Number(game.current_hole));
-  const currentBar = Array.isArray(currentHole?.bars) ? currentHole?.bars?.[0] : currentHole?.bars;
+  const linkedBar = Array.isArray(currentHole?.bars) ? currentHole?.bars?.[0] : currentHole?.bars;
+  const currentBar = linkedBar ?? (currentHole?.custom_name ? { name: currentHole.custom_name, address: currentHole.custom_address } : null);
+
+  if (game.status === "active" && currentHole?.wheel_enabled) {
+    const { data: myWheelRows } = await supabase.rpc("assign_wheel_for_hole", {
+      p_game_id: game.id,
+      p_hole_number: game.current_hole,
+    });
+    const myWheel = Array.isArray(myWheelRows) ? myWheelRows[0] : myWheelRows;
+    if (myWheel?.status === "assigned") redirect(`/game/${game.code}/wheel`);
+  }
+
   const me = playerList.find((player) => player.user_id === userId);
   const myResult = resultList.find((r) => r.user_id === userId && Number(r.hole_number) === Number(game.current_hole));
 
@@ -56,7 +68,8 @@ export default async function GamePage({ params, searchParams }: { params: Promi
 
   if (game.status === "lobby") {
     const firstHole = holeList[0];
-    const firstBar = Array.isArray(firstHole?.bars) ? firstHole?.bars?.[0] : firstHole?.bars;
+    const linkedFirstBar = Array.isArray(firstHole?.bars) ? firstHole?.bars?.[0] : firstHole?.bars;
+    const firstBar = linkedFirstBar ?? (firstHole?.custom_name ? { name: firstHole.custom_name } : null);
     return (
       <main className="lobby-screen old-page">
         <MobileTopBar showBack backHref="/dashboard" />
@@ -68,7 +81,8 @@ export default async function GamePage({ params, searchParams }: { params: Promi
           <div className="share-code-card">
             <span>Spelkod</span>
             <strong>{game.code}</strong>
-            <p>Skicka koden eller länken till de andra spelarna.</p>
+            <p>Skanna QR-koden eller skicka koden eller länken till de andra spelarna.</p>
+            <GameQrCode code={game.code} />
             <ShareGameButton code={game.code} />
           </div>
 
@@ -130,15 +144,15 @@ export default async function GamePage({ params, searchParams }: { params: Promi
 
         <section className="bar-info-card">
           <div>
-            <p>Stad: {currentBar?.city ?? "–"}</p>
+            <p>{currentHole?.custom_name ? "Adress" : "Stad"}: {currentHole?.custom_name ? currentBar?.address : currentBar?.city ?? "–"}</p>
             <p>Wheel of Doom: {currentHole?.wheel_enabled ? "Ja" : "Nej"}</p>
             <p>Spelläge: {game.wheel_mode === "classic" ? "Classic" : game.wheel_mode === "everyone" ? "Everyone" : "Random"}</p>
           </div>
           <div className="bar-placeholder" aria-hidden="true">🍺</div>
         </section>
 
-        {currentHole?.wheel_enabled ? (
-          <Link className="wheel-event-button" href={`/game/${game.code}/wheel`}>💀 Wheel of Doom</Link>
+        {currentHole?.custom_address ? (
+          <a className="directions-button" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(currentHole.custom_address)}`} target="_blank" rel="noreferrer">Öppna vägbeskrivning</a>
         ) : null}
 
         <div className="hole-tracker" aria-label="Hål">

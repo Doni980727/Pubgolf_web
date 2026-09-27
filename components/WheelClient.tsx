@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { revealWheel, resolveWheel } from "@/app/game/[code]/wheel/actions";
 
 type Challenge = {
@@ -14,7 +15,9 @@ type Challenge = {
 
 type Reveal = Challenge & { assignment_id: number };
 
-export default function WheelClient({ gameId, hole, challenges }: { gameId: number; hole: number; challenges: Challenge[] }) {
+export default function WheelClient({ gameId, code, hole, challenges }: { gameId: number; code: string; hole: number; challenges: Challenge[] }) {
+  const router = useRouter();
+  const started = useRef(false);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<Reveal | null>(null);
@@ -27,7 +30,7 @@ export default function WheelClient({ gameId, hole, challenges }: { gameId: numb
     return `conic-gradient(${challenges.map((_, index) => `${palette[index % palette.length]} ${index * step}deg ${(index + 1) * step}deg`).join(",")})`;
   }, [challenges, step]);
 
-  async function spin() {
+  const spin = useCallback(async () => {
     if (spinning || result || notSelected) return;
     setSpinning(true);
     try {
@@ -49,11 +52,18 @@ export default function WheelClient({ gameId, hole, challenges }: { gameId: numb
       setSpinning(false);
       alert(error instanceof Error ? error.message : "Kunde inte snurra hjulet");
     }
-  }
+  }, [challenges, gameId, hole, notSelected, result, spinning, step]);
+
+  useEffect(() => {
+    if (started.current || challenges.length === 0) return;
+    started.current = true;
+    void spin();
+  }, [challenges.length, spin]);
 
   async function resolve(completed: boolean) {
     await resolveWheel(gameId, hole, completed);
     setResolved(completed ? "completed" : "failed");
+    window.setTimeout(() => router.push(`/game/${code}`), 900);
   }
 
   return (
@@ -79,9 +89,7 @@ export default function WheelClient({ gameId, hole, challenges }: { gameId: numb
         </div>
       </div>
 
-      {!result && !notSelected ? (
-        <button className="old-button wheel-spin" onClick={spin} disabled={spinning}>{spinning ? "Snurrar…" : "Snurra"}</button>
-      ) : null}
+      {!result && !notSelected ? <p className="wheel-spinning-label">Hjulet snurrar…</p> : null}
 
       {notSelected ? (
         <div className="wheel-result">
