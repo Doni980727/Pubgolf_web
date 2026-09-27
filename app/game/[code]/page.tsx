@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import MobileTopBar from "@/components/MobileTopBar";
-import AutoRefresh from "@/components/AutoRefresh";
+import GameSync from "@/components/GameSync";
 import ShareGameButton from "@/components/ShareGameButton";
 import ScoreControl from "@/components/ScoreControl";
 import GameQrCode from "@/components/GameQrCode";
@@ -28,11 +28,18 @@ export default async function GamePage({ params, searchParams }: { params: Promi
     .single();
   if (!game) notFound();
 
+  const resultsRequest = game.status === "lobby"
+    ? Promise.resolve({ data: [] as ResultRow[] })
+    : supabase.from("results").select("user_id,hole_number,score,confirmed").eq("game_id", game.id).lte("hole_number", game.current_hole);
+  const wheelRequest = game.status === "lobby"
+    ? Promise.resolve({ data: [] as WheelRow[] })
+    : supabase.from("wheel_assignments").select("user_id,hole_number,score_delta,status").eq("game_id", game.id).lte("hole_number", game.current_hole);
+
   const [{ data: players }, { data: holes }, { data: results }, { data: wheelRows }] = await Promise.all([
     supabase.from("game_player_list").select("user_id,username,joined_at").eq("game_id", game.id).order("joined_at"),
     supabase.from("game_holes").select("hole_number,wheel_enabled,bar_id,custom_name,custom_address,bars(name,city)").eq("game_id", game.id).order("hole_number"),
-    supabase.from("results").select("user_id,hole_number,score,confirmed").eq("game_id", game.id),
-    supabase.from("wheel_assignments").select("user_id,hole_number,score_delta,status").eq("game_id", game.id),
+    resultsRequest,
+    wheelRequest,
   ]);
 
   const playerList = (players ?? []) as PlayerRow[];
@@ -73,7 +80,7 @@ export default async function GamePage({ params, searchParams }: { params: Promi
     return (
       <main className="lobby-screen old-page">
         <MobileTopBar showBack backHref="/dashboard" />
-        <AutoRefresh interval={2200} />
+        <GameSync gameId={game.id} fallbackInterval={30000} />
         <section className="lobby-content">
           {query.error ? <p className="form-error lobby-error">{query.error}</p> : null}
           <p className="lobby-summary">Startpub: {firstBar?.name ?? "–"} &nbsp;&nbsp; Antal hål: {game.holes}</p>
@@ -133,7 +140,7 @@ export default async function GamePage({ params, searchParams }: { params: Promi
   return (
     <main className="game-screen old-page">
       <MobileTopBar showBack backHref="/dashboard" />
-      <AutoRefresh interval={3500} />
+      <GameSync gameId={game.id} fallbackInterval={45000} />
       <section className="game-content">
         {query.error ? <p className="form-error game-error">{query.error}</p> : null}
 

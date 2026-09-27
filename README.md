@@ -89,6 +89,14 @@ supabase/migrations/005_custom_route_optimization.sql
 
 Den lägger till tillfälliga koordinater för automatisk optimering av custom-rutter.
 
+Aktivera därefter effektiva realtidsuppdateringar med:
+
+```text
+supabase/migrations/006_realtime_game_updates.sql
+```
+
+Den ersätter tät sidpollning med push-uppdateringar från Supabase Realtime.
+
 ## Mobilanvändning
 
 Sidan är byggd mobile-first och använder `100dvh`, `viewport-fit=cover` samt `safe-area-inset-*`. På desktop visas appen i ungefär mobilbredd i mitten för att beteendet ska vara lätt att testa.
