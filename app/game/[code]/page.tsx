@@ -80,7 +80,7 @@ export default async function GamePage({ params, searchParams }: { params: Promi
     return (
       <main className="lobby-screen old-page">
         <MobileTopBar showBack backHref="/dashboard" />
-        <GameSync gameId={game.id} fallbackInterval={30000} />
+        <GameSync gameId={game.id} fallbackInterval={10000} />
         <section className="lobby-content">
           {query.error ? <p className="form-error lobby-error">{query.error}</p> : null}
           <p className="lobby-summary">Startpub: {firstBar?.name ?? "–"} &nbsp;&nbsp; Antal hål: {game.holes}</p>
