@@ -26,24 +26,32 @@ export default function QrCodeScanner() {
     if (!isOpen) return;
 
     let disposed = false;
-    let scanner: import("html5-qrcode").Html5QrcodeScanner | undefined;
+    let scanner: import("html5-qrcode").Html5Qrcode | undefined;
 
-    void import("html5-qrcode").then(({ Html5QrcodeScanner, Html5QrcodeSupportedFormats }) => {
+    const stopScanner = async () => {
+      if (!scanner) return;
+      if (scanner.isScanning) await scanner.stop();
+      scanner.clear();
+    };
+
+    void import("html5-qrcode").then(async ({ Html5Qrcode, Html5QrcodeSupportedFormats }) => {
       if (disposed) return;
 
-      scanner = new Html5QrcodeScanner(
+      scanner = new Html5Qrcode(
         scannerId,
+        {
+          verbose: false,
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        },
+      );
+
+      await scanner.start(
+        { facingMode: { exact: "environment" } },
         {
           fps: 10,
           qrbox: { width: 220, height: 220 },
           aspectRatio: 1,
-          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-          rememberLastUsedCamera: true,
         },
-        false,
-      );
-
-      scanner.render(
         (decodedText) => {
           const code = getGameCode(decodedText);
           if (!code) {
@@ -52,15 +60,19 @@ export default function QrCodeScanner() {
           }
 
           setError("");
-          void scanner?.clear().finally(() => router.push(`/join/${code}`));
+          void stopScanner().finally(() => router.push(`/join/${code}`));
         },
         () => undefined,
       );
-    }).catch(() => setError("Kameran kunde inte startas. Kontrollera webbläsarens kamerabehörighet."));
+
+      if (disposed) await stopScanner();
+    }).catch(() => {
+      if (!disposed) setError("Kameran kunde inte startas. Kontrollera webbläsarens kamerabehörighet.");
+    });
 
     return () => {
       disposed = true;
-      void scanner?.clear().catch(() => undefined);
+      void stopScanner().catch(() => undefined);
     };
   }, [isOpen, router, scannerId]);
 
