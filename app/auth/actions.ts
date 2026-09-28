@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 function safeNext(value: FormDataEntryValue | null) {
@@ -20,14 +21,18 @@ export async function signIn(formData: FormData) {
 
 export async function signUp(formData: FormData) {
   const supabase = await createClient();
+  const requestHeaders = await headers();
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const username = String(formData.get("username") ?? "").trim();
   const next = safeNext(formData.get("next"));
+  const requestOrigin = requestHeaders.get("origin");
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || requestOrigin || "http://localhost:3000").replace(/\/$/, "");
+  const emailRedirectTo = `${siteUrl}/auth/confirm?next=${encodeURIComponent(next)}`;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { username } },
+    options: { data: { username }, emailRedirectTo },
   });
   if (error) redirect(`/auth?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
   if (data.session) redirect(next);

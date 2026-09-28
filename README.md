@@ -31,7 +31,12 @@ Skapa `.env.local` från `.env.example`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://DIN-PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+NEXT_PUBLIC_SITE_URL=https://DIN-PRODUKTIONS-DOMÄN.se
 ```
+
+I Supabase under **Authentication → URL Configuration**, sätt **Site URL** till samma
+produktionsdomän och lägg till `https://DIN-PRODUKTIONS-DOMÄN.se/auth/confirm` under
+**Redirect URLs**. Lägg även till `http://localhost:3000/auth/confirm` för lokal utveckling.
 
 Starta:
 
